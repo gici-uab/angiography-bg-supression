@@ -1,0 +1,564 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+      --><title>asdemo</title><meta name="generator" content="MATLAB 7.10"><meta name="date" content="2010-04-13"><meta name="m-file" content="asdemo"><style type="text/css">
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#3">create test data</a></li><li><a href="#4">create ALPHA SHAPES (1)</a></li><li><a href="#5">- modify the plot using ASLIB subroutines</a></li><li><a href="#6">create ALPHA SHAPES (2)</a></li><li><a href="#7">- show ALPHA PATCHES</a></li><li><a href="#8">- mark ALPHA SHAPES / ALPHA PATCHES</a></li><li><a href="#9">for programmers</a></li><li><a href="#10">- extract ALPHA SHAPES</a></li><li><a href="#11">- extract ALPHA PATCHES</a></li><li><a href="#12">- show ALPHA element properties</a></li></ul></div><pre class="codeinput"><span class="comment">% ASDEMO		a demo script for ASHAPE / ASLIB</span>
+<span class="comment">%</span>
+<span class="comment">% SYNTAX</span>
+<span class="comment">%		ASDEMO</span>
+<span class="comment">% EXAMPLE</span>
+<span class="comment">%		asdemo</span>
+<span class="comment">% NOTE</span>
+<span class="comment">%		ASDEMO sets your random generator!</span>
+</pre><pre class="codeinput"><span class="comment">% created:</span>
+<span class="comment">%	us	17-Jan-2005</span>
+<span class="comment">% modified:</span>
+<span class="comment">%	us	13-Apr-2010 15:31:23</span>
+</pre><h2>create test data<a name="3"></a></h2><pre class="codeinput"><span class="comment">% fill a square with random data</span>
+<span class="comment">% ... and put some holes into it</span>
+<span class="comment">% note</span>
+<span class="comment">% - sets and uses Mersenne Twister (Nishimura/Matsumoto) algorithm</span>
+<span class="comment">%		rand('twister',10);</span>
+<span class="comment">% - sets and uses Marsaglia's algorithm</span>
+		rand(<span class="string">'state'</span>,10);			<span class="comment">%#ok</span>
+
+		n=400;
+		x=rand(n,1);
+		y=rand(n,1);
+		cp=[
+			.25	.25	.1
+			.75	.25	.2
+			.25	.75	.1
+			.75	.75	.4
+			.5	.5	.1
+		];
+		a=pi/180*(0:360);
+	<span class="keyword">for</span>	j=1:size(cp,1)
+		z=cp(j,1)+1i*cp(j,2)+cp(j,3)*exp(1i*a);
+		z=inpolygon(x,y,real(z),imag(z));
+		x=x(~z);
+		y=y(~z);
+	<span class="keyword">end</span>
+</pre><h2>create ALPHA SHAPES (1)<a name="4"></a></h2><pre class="codeinput"><span class="comment">% create ALPHA SHAPES using circles with radius r</span>
+<span class="comment">% show all valid ALPHA CIRCLES using option [-bc]</span>
+<span class="comment">% for available options see: ALSIB -o</span>
+<span class="comment">% note</span>
+<span class="comment">% - ALPHA LINE ALPHA CIRCLES are darker</span>
+
+		r=.09;
+		disp(<span class="string">'alpha shaping in progress...'</span>);
+		p=ashape(x,y,r,<span class="string">'-bc'</span>);
+		disp(<span class="string">'alpha shaping done'</span>);
+		disp(sprintf(<span class="string">'runtime%10.3fs'</span>,p.runtime));
+<span class="comment">% ... keep for later use</span>
+		po=p;
+</pre><pre class="codeoutput">alpha shaping in progress...
+alpha shaping done
+runtime     0.171s
+</pre><img vspace="5" hspace="5" src="asdemo_01.png" alt=""> <h2>- modify the plot using ASLIB subroutines<a name="5"></a></h2><pre class="codeinput"><span class="comment">% create a new figure and turn ALPHA CIRCLES off</span>
+<span class="comment">% ... using a function handle to ASLIB's graphics engine</span>
+<span class="comment">% for available subroutines see: ASLIB -s</span>
+
+<span class="comment">% ... plot all elements</span>
+		p=p.f.gall(p);
+<span class="comment">% ... remove ALPHA CIRCLES</span>
+		p=p.f.gcir(p,1);
+<span class="comment">% ... change DATA MARKERS to (+);</span>
+		set([p.h.AS_dat{:}],<span class="string">'marker'</span>,<span class="string">'+'</span>);
+
+<span class="comment">% mark ALPHA LINE nodes and edges</span>
+<span class="comment">% ... using index fields returned in P</span>
+<span class="comment">% for an explanation of P fields see: ASLIB -f</span>
+
+		ix=p.dmod==4;
+		line(p.x(ix),p.y(ix),<span class="keyword">...</span>
+			<span class="string">'marker'</span>,<span class="string">'o'</span>,<span class="keyword">...</span>
+			<span class="string">'markersize'</span>,8,<span class="keyword">...</span>
+			<span class="string">'markerfacecolor'</span>,[.5 .5 0],<span class="keyword">...</span>
+			<span class="string">'linestyle'</span>,<span class="string">'none'</span>,<span class="keyword">...</span>
+			<span class="string">'color'</span>,[0 0 0]);
+		ix=p.amod==2;
+		line(p.x(p.seg(ix,:)).',p.y(p.seg(ix,:)).',<span class="keyword">...</span>
+			<span class="string">'linewidth'</span>,4,<span class="keyword">...</span>
+			<span class="string">'color'</span>,[0 0 0]);
+</pre><img vspace="5" hspace="5" src="asdemo_02.png" alt=""> <h2>create ALPHA SHAPES (2)<a name="6"></a></h2><pre class="codeinput"><span class="comment">% use a different ALPHA CIRCLE radius, do not plot at runtime [-g]</span>
+
+		o=ashape(p.x,p.y,r/2,<span class="string">'-g'</span>);
+<span class="comment">% ... create an alias for later plotting</span>
+		f=o.f.gpat;
+</pre><h2>- show ALPHA PATCHES<a name="7"></a></h2><pre class="codeinput"><span class="comment">% note</span>
+<span class="comment">% - CONVEX HULLS  are shown in light red</span>
+<span class="comment">% - ALPHA LINES   are shown in bold black</span>
+<span class="comment">% - ALPHA SHAPES  are grouped by the color of their ALPHA NODES (squares)</span>
+<span class="comment">% - ALPHA PATCHES are marked  by the color of their area</span>
+
+		figure;
+		f(o);
+</pre><img vspace="5" hspace="5" src="asdemo_03.png" alt=""> <h2>- mark ALPHA SHAPES / ALPHA PATCHES<a name="8"></a></h2><pre class="codeinput"><span class="comment">% individual ALPHA SHAPES/ALPHA PATCHES are marked in cyan</span>
+<span class="comment">% by selecting</span>
+<span class="comment">% - ALPHA PATCHES | ALPHA HULLS on the graph</span>
+<span class="comment">% - SHAPE | PATCH elements on the colorbar</span>
+<span class="comment">% by applying</span>
+<span class="comment">% - macro P.f.mark()</span>
+<span class="comment">% selections are toggled</span>
+<span class="comment">%</span>
+<span class="comment">% syntax</span>
+<span class="comment">%		P = P.f.mark(P,ix1,...,ixN);</span>
+<span class="comment">% argument(s)</span>
+<span class="comment">%		ixX:	 ALPHA SHAPE</span>
+<span class="comment">%		ixX:	[ALPHA SHAPE, ALPHA PATCH]</span>
+
+		figure;
+		o=f(o);
+
+<span class="comment">% mark</span>
+<span class="comment">% - ALPHA SHAPE #2</span>
+<span class="comment">% - ALPHA SHAPE #1 PATCH #2 / #3</span>
+
+		o.f.mark(o,2,[1,3],[1,2]);
+</pre><img vspace="5" hspace="5" src="asdemo_04.png" alt=""> <h2>for programmers<a name="9"></a></h2><pre class="codeinput"><span class="comment">% A denotes ALPHA</span>
+</pre><h2>- extract ALPHA SHAPES<a name="10"></a></h2><pre class="codeinput"><span class="comment">% A SHAPES are built from A EDGES and A LINES</span>
+<span class="comment">%</span>
+<span class="comment">% - their A EDGES are NOT contiguous</span>
+<span class="comment">% - their A EDGES are indexed by</span>
+<span class="comment">%</span>
+<span class="comment">%	P.ashape:		contains ALL  A EDGES including those with</span>
+<span class="comment">%			bifurcating A NODES</span>
+<span class="comment">%</span>
+<span class="comment">%	P.sshape:		contains only A EDGES with singular A NODES</span>
+<span class="comment">%			on both sides</span>
+<span class="comment">%</span>
+<span class="comment">%	        :		each field is a CELL of</span>
+<span class="comment">%			of {P.nshape x 2} indices into P.x/P.y</span>
+<span class="comment">%			with each pair [1 x 2] forming a valid A EDGE</span>
+
+		figure;
+		p=ashape(x,y,r/2,<span class="string">'-g'</span>);
+		p.f.gdat(p);		<span class="comment">% &lt;- plot data</span>
+		p.f.gcon(p);		<span class="comment">% &lt;- plot A NODES</span>
+
+		ns=p.nshape;		<span class="comment">% &lt;- # A SHAPES</span>
+		as=p.ashape;		<span class="comment">% &lt;- A EDGE indices: full data set</span>
+
+<span class="comment">% - create a color map</span>
+		cmap=summer(256);
+		cmix=round(linspace(16,240,ns));
+		cmap=cmap(cmix,:);
+		colormap(cmap);
+
+<span class="comment">% - plot individual A EDGES</span>
+	<span class="keyword">for</span>	i=1:ns
+		xs=p.x(as{i});
+		ys=p.y(as{i});
+		line(xs.',ys.',10*ones(size(xs.')),<span class="keyword">...</span>
+			<span class="string">'marker'</span>,<span class="string">'s'</span>,<span class="keyword">...</span>
+			<span class="string">'markersize'</span>,4,<span class="keyword">...</span>
+			<span class="string">'markeredgecolor'</span>,cmap(i,:),<span class="keyword">...</span>
+			<span class="string">'markerfacecolor'</span>,cmap(i,:),<span class="keyword">...</span>
+			<span class="string">'linewidth'</span>,2,<span class="keyword">...</span>
+			<span class="string">'color'</span>,cmap(i,:));
+	<span class="keyword">end</span>
+</pre><img vspace="5" hspace="5" src="asdemo_05.png" alt=""> <h2>- extract ALPHA PATCHES<a name="11"></a></h2><pre class="codeinput"><span class="comment">% A PATCHES are part of A SHAPES</span>
+<span class="comment">%</span>
+<span class="comment">% - their A NODES are contiguous</span>
+<span class="comment">% - their A NODES are indexed by</span>
+<span class="comment">%</span>
+<span class="comment">%	P.apatch:		M x N CELL array with format</span>
+<span class="comment">%</span>
+<span class="comment">%			A SHAPE 1/A PATCH 1 ... A SHAPE 1/A PATCH N</span>
+<span class="comment">%			...</span>
+<span class="comment">%			A SHAPE M/A PATCH 1 ... A SHAPE M/A PATCH N</span>
+<span class="comment">%</span>
+<span class="comment">%	        :		each CELL is a {M x 1} list of indices</span>
+<span class="comment">%			into P.x/P.y, which are valid A NODES</span>
+<span class="comment">%</span>
+<span class="comment">%	P.mpatch:		ARRAY with same format showing type of A PATCH</span>
+<span class="comment">%			1 = A PATCH is a subset of an A SHAPE</span>
+<span class="comment">%			2 = A PATCH is the A SHAPE</span>
+
+		figure;
+		p=p.f.gpat(p);		<span class="comment">% &lt;- plot A SHAPES/A PATCHES</span>
+		p=p.f.gseg(p,1);	<span class="comment">% &lt;- remove A EDGES</span>
+
+		np=p.npatch;		<span class="comment">% &lt;- # A PATCHES</span>
+		ns=p.spatch(1);		<span class="comment">% &lt;- # A SHAPES</span>
+		na=p.spatch(2);		<span class="comment">% &lt;- # A PATCHES/A SHAPE [max]</span>
+
+<span class="comment">% - show distribution of A PATCHES</span>
+<span class="comment">%   note:</span>
+<span class="comment">%   - A SHAPE 2 has only one A PATCH</span>
+
+		pc=arrayfun(@(x) sprintf(<span class="string">'P #%-1d'</span>,x),1:size(p.mpatch,2),<span class="string">'uni'</span>,false);
+		pr=arrayfun(@(x) sprintf(<span class="string">'S #%-1d'</span>,x),1:size(p.mpatch,1),<span class="string">'uni'</span>,false);
+		pd=[
+			{ <span class="string">''</span>},pc
+			[pr.',num2cell(p.mpatch)]
+		];
+		disp(pd);
+
+<span class="comment">% - create a color map</span>
+		cmap=summer(256);
+		cmix=round(linspace(16,240,np));
+		cmap=cmap(cmix,:);
+		colormap(cmap);
+		cmix=0;
+
+<span class="comment">% - plot individual A PATCHES</span>
+	<span class="keyword">for</span>	j=1:ns
+	<span class="keyword">for</span>	i=1:na
+	<span class="keyword">if</span>	p.mpatch(j,i)
+		cmix=cmix+1;
+		xs=p.x(p.apatch{j,i});
+		ys=p.y(p.apatch{j,i});
+		disp(sprintf(<span class="string">'marking A shape %3d  /  A patch %3d: %5d A edges'</span>,j,i,numel(xs)-1));
+		line(xs,ys,20*ones(size(xs)),<span class="keyword">...</span>
+			<span class="string">'marker'</span>,<span class="string">'s'</span>,<span class="keyword">...</span>
+			<span class="string">'markersize'</span>,4,<span class="keyword">...</span>
+			<span class="string">'markeredgecolor'</span>,cmap(cmix,:),<span class="keyword">...</span>
+			<span class="string">'markerfacecolor'</span>,cmap(cmix,:),<span class="keyword">...</span>
+			<span class="string">'linewidth'</span>,2,<span class="keyword">...</span>
+			<span class="string">'color'</span>,[0,0,0]);
+	<span class="keyword">end</span>
+	<span class="keyword">end</span>
+	<span class="keyword">end</span>
+		set(p.h.AS_patch,{<span class="string">'facecolor'</span>},num2cell(brighten(cmap,.75),2));
+</pre><pre class="codeoutput">    ''        'P #1'    'P #2'    'P #3'    'P #4'    'P #5'    'P #6'
+    'S #1'    [   1]    [   1]    [   1]    [   1]    [   1]    [   1]
+    'S #2'    [   1]    [   1]    [   0]    [   0]    [   0]    [   0]
+    'S #3'    [   2]    [   0]    [   0]    [   0]    [   0]    [   0]
+
+marking A shape   1  /  A patch   1:    65 A edges
+marking A shape   1  /  A patch   2:    23 A edges
+marking A shape   1  /  A patch   3:    18 A edges
+marking A shape   1  /  A patch   4:     4 A edges
+marking A shape   1  /  A patch   5:     3 A edges
+marking A shape   1  /  A patch   6:     3 A edges
+marking A shape   2  /  A patch   1:     9 A edges
+marking A shape   2  /  A patch   2:     3 A edges
+marking A shape   3  /  A patch   1:     3 A edges
+</pre><img vspace="5" hspace="5" src="asdemo_06.png" alt=""> <h2>- show ALPHA element properties<a name="12"></a></h2><pre class="codeinput"><span class="comment">% use macro P.f.gmod() to display the node/line properties of</span>
+<span class="comment">%</span>
+<span class="comment">% - data points		P.dmod</span>
+<span class="comment">% - A EDGES		P.amod</span>
+<span class="comment">% syntax</span>
+<span class="comment">%</span>
+<span class="comment">%		P = P.f.gmod(P);</span>
+
+		figure;
+		p=p.f.gmod(po);
+		set(p.h.AS_legend,<span class="string">'location'</span>,<span class="string">'northeast'</span>);
+</pre><img vspace="5" hspace="5" src="asdemo_07.png" alt=""> <p class="footer"><br>
+      Published with MATLAB&reg; 7.10<br></p></div><!--
+##### SOURCE BEGIN #####
+% ASDEMO		a demo script for ASHAPE / ASLIB
+%
+% SYNTAX
+%		ASDEMO
+% EXAMPLE
+%		asdemo
+% NOTE
+%		ASDEMO sets your random generator!
+%%
+
+% created:
+%	us	17-Jan-2005
+% modified:
+%	us	13-Apr-2010 15:31:23
+%% create test data
+
+% fill a square with random data
+% ... and put some holes into it
+% note
+% - sets and uses Mersenne Twister (Nishimura/Matsumoto) algorithm
+%		rand('twister',10);
+% - sets and uses Marsaglia's algorithm 
+		rand('state',10);			%#ok
+
+		n=400;
+		x=rand(n,1);
+		y=rand(n,1);
+		cp=[
+			.25	.25	.1
+			.75	.25	.2
+			.25	.75	.1
+			.75	.75	.4
+			.5	.5	.1
+		];
+		a=pi/180*(0:360);
+	for	j=1:size(cp,1)
+		z=cp(j,1)+1i*cp(j,2)+cp(j,3)*exp(1i*a);
+		z=inpolygon(x,y,real(z),imag(z));
+		x=x(~z);
+		y=y(~z);
+	end
+%% create ALPHA SHAPES (1)
+
+% create ALPHA SHAPES using circles with radius r
+% show all valid ALPHA CIRCLES using option [-bc]
+% for available options see: ALSIB -o
+% note
+% - ALPHA LINE ALPHA CIRCLES are darker
+
+		r=.09;
+		disp('alpha shaping in progress...');
+		p=ashape(x,y,r,'-bc');
+		disp('alpha shaping done');
+		disp(sprintf('runtime%10.3fs',p.runtime));
+% ... keep for later use
+		po=p;
+%% - modify the plot using ASLIB subroutines
+
+% create a new figure and turn ALPHA CIRCLES off
+% ... using a function handle to ASLIB's graphics engine
+% for available subroutines see: ASLIB -s
+
+% ... plot all elements
+		p=p.f.gall(p);
+% ... remove ALPHA CIRCLES
+		p=p.f.gcir(p,1);
+% ... change DATA MARKERS to (+);
+		set([p.h.AS_dat{:}],'marker','+');
+
+% mark ALPHA LINE nodes and edges
+% ... using index fields returned in P
+% for an explanation of P fields see: ASLIB -f
+
+		ix=p.dmod==4;
+		line(p.x(ix),p.y(ix),...
+			'marker','o',...
+			'markersize',8,...
+			'markerfacecolor',[.5 .5 0],...
+			'linestyle','none',...
+			'color',[0 0 0]);
+		ix=p.amod==2;
+		line(p.x(p.seg(ix,:)).',p.y(p.seg(ix,:)).',...
+			'linewidth',4,...
+			'color',[0 0 0]);
+%% create ALPHA SHAPES (2)
+
+% use a different ALPHA CIRCLE radius, do not plot at runtime [-g]
+
+		o=ashape(p.x,p.y,r/2,'-g');
+% ... create an alias for later plotting
+		f=o.f.gpat;
+%% - show ALPHA PATCHES
+
+% note
+% - CONVEX HULLS  are shown in light red
+% - ALPHA LINES   are shown in bold black
+% - ALPHA SHAPES  are grouped by the color of their ALPHA NODES (squares)
+% - ALPHA PATCHES are marked  by the color of their area
+
+		figure;
+		f(o);
+%% - mark ALPHA SHAPES / ALPHA PATCHES
+
+% individual ALPHA SHAPES/ALPHA PATCHES are marked in cyan
+% by selecting
+% - ALPHA PATCHES | ALPHA HULLS on the graph
+% - SHAPE | PATCH elements on the colorbar
+% by applying
+% - macro P.f.mark()
+% selections are toggled
+%
+% syntax
+%		P = P.f.mark(P,ix1,...,ixN);
+% argument(s)
+%		ixX:	 ALPHA SHAPE
+%		ixX:	[ALPHA SHAPE, ALPHA PATCH]
+
+		figure;
+		o=f(o);
+
+% mark
+% - ALPHA SHAPE #2
+% - ALPHA SHAPE #1 PATCH #2 / #3
+
+		o.f.mark(o,2,[1,3],[1,2]);
+%% for programmers
+
+% A denotes ALPHA
+%% - extract ALPHA SHAPES
+
+% A SHAPES are built from A EDGES and A LINES
+%
+% - their A EDGES are NOT contiguous
+% - their A EDGES are indexed by
+%
+%	P.ashape:		contains ALL  A EDGES including those with
+%			bifurcating A NODES
+%
+%	P.sshape:		contains only A EDGES with singular A NODES
+%			on both sides
+%
+%	        :		each field is a CELL of
+%			of {P.nshape x 2} indices into P.x/P.y
+%			with each pair [1 x 2] forming a valid A EDGE
+
+		figure;
+		p=ashape(x,y,r/2,'-g');
+		p.f.gdat(p);		% <- plot data
+		p.f.gcon(p);		% <- plot A NODES
+
+		ns=p.nshape;		% <- # A SHAPES
+		as=p.ashape;		% <- A EDGE indices: full data set
+
+% - create a color map
+		cmap=summer(256);
+		cmix=round(linspace(16,240,ns));
+		cmap=cmap(cmix,:);
+		colormap(cmap);
+
+% - plot individual A EDGES
+	for	i=1:ns
+		xs=p.x(as{i});
+		ys=p.y(as{i});
+		line(xs.',ys.',10*ones(size(xs.')),...
+			'marker','s',...
+			'markersize',4,...
+			'markeredgecolor',cmap(i,:),...
+			'markerfacecolor',cmap(i,:),...
+			'linewidth',2,...
+			'color',cmap(i,:));
+	end
+%% - extract ALPHA PATCHES
+
+% A PATCHES are part of A SHAPES
+%
+% - their A NODES are contiguous
+% - their A NODES are indexed by
+%
+%	P.apatch:		M x N CELL array with format
+%
+%			A SHAPE 1/A PATCH 1 ... A SHAPE 1/A PATCH N
+%			...
+%			A SHAPE M/A PATCH 1 ... A SHAPE M/A PATCH N
+%
+%	        :		each CELL is a {M x 1} list of indices
+%			into P.x/P.y, which are valid A NODES
+%
+%	P.mpatch:		ARRAY with same format showing type of A PATCH
+%			1 = A PATCH is a subset of an A SHAPE
+%			2 = A PATCH is the A SHAPE
+
+		figure;
+		p=p.f.gpat(p);		% <- plot A SHAPES/A PATCHES
+		p=p.f.gseg(p,1);	% <- remove A EDGES
+
+		np=p.npatch;		% <- # A PATCHES
+		ns=p.spatch(1);		% <- # A SHAPES
+		na=p.spatch(2);		% <- # A PATCHES/A SHAPE [max]
+
+% - show distribution of A PATCHES
+%   note:
+%   - A SHAPE 2 has only one A PATCH
+
+		pc=arrayfun(@(x) sprintf('P #%-1d',x),1:size(p.mpatch,2),'uni',false);
+		pr=arrayfun(@(x) sprintf('S #%-1d',x),1:size(p.mpatch,1),'uni',false);
+		pd=[
+			{ ''},pc
+			[pr.',num2cell(p.mpatch)]
+		];
+		disp(pd);
+
+% - create a color map
+		cmap=summer(256);
+		cmix=round(linspace(16,240,np));
+		cmap=cmap(cmix,:);
+		colormap(cmap);
+		cmix=0;
+
+% - plot individual A PATCHES
+	for	j=1:ns
+	for	i=1:na
+	if	p.mpatch(j,i)
+		cmix=cmix+1;
+		xs=p.x(p.apatch{j,i});
+		ys=p.y(p.apatch{j,i});
+		disp(sprintf('marking A shape %3d  /  A patch %3d: %5d A edges',j,i,numel(xs)-1));
+		line(xs,ys,20*ones(size(xs)),...
+			'marker','s',...
+			'markersize',4,...
+			'markeredgecolor',cmap(cmix,:),...
+			'markerfacecolor',cmap(cmix,:),...
+			'linewidth',2,...
+			'color',[0,0,0]);
+	end
+	end
+	end
+		set(p.h.AS_patch,{'facecolor'},num2cell(brighten(cmap,.75),2));
+%% - show ALPHA element properties
+
+% use macro P.f.gmod() to display the node/line properties of
+%
+% - data points		P.dmod
+% - A EDGES		P.amod
+% syntax
+%
+%		P = P.f.gmod(P);
+
+		figure;
+		p=p.f.gmod(po);
+		set(p.h.AS_legend,'location','northeast');
+##### SOURCE END #####
+--></body></html>
